@@ -14,7 +14,9 @@ bot = telebot.TeleBot(os.getenv('TOKEN'))
 
 with open('source', 'r') as file1, open('answers', 'r') as file2:
     list_of_questions = [json.loads(i) for i in file1.readlines()]
-    right_answers = [j for j in file2.readlines()]
+    right_answers = [j.rstrip() for j in file2.readlines()]
+    if 'SELECt' in right_answers:
+        print('sadfadsfdasf')
 
 random.shuffle(list_of_questions)
 
@@ -29,7 +31,8 @@ def option_answers(option1, option2, option3, option4):
 
 def right_answer(message, number):
     answers[list_of_questions[number-1]['question_text']] = message.text
-    bot.send_message(message.chat.id, text="Хуясе ты умный!")
+    bot.send_message(message.chat.id, text="Правильно!")
+    time.sleep(1)
     bot.send_message(message.chat.id, text=list_of_questions[number]['question_text'],
                      reply_markup=option_answers(list_of_questions[number]['option1'], list_of_questions[number]['option2'],
                                                  list_of_questions[number]['option3'], list_of_questions[number]['option4']))
@@ -38,8 +41,9 @@ def right_answer(message, number):
 
 def wrong_answer(message, number):
     answers[list_of_questions[number-1]['question_text']] = message.text
-    bot.send_message(message.chat.id, text=f"Хуясе ты тупой!")
-    bot.send_message(message.chat.id, text=list_of_questions[number-1]['right_answer'])
+    bot.send_message(message.chat.id, text=f"Неправильно\n\n{list_of_questions[number-1]['right_answer']}")
+    #bot.send_message(message.chat.id, text=list_of_questions[number-1]['right_answer'])
+    time.sleep(1)
     bot.send_message(message.chat.id, text=list_of_questions[number]['question_text'],
                      reply_markup=option_answers(list_of_questions[number]['option1'], list_of_questions[number]['option2'],
                                                  list_of_questions[number]['option3'], list_of_questions[number]['option4']))
@@ -68,7 +72,8 @@ def db_write(message, answers):
             price TEXT,
             date TIMESTAMP);
             """)
-    data_tuple = (str(uuid4()), message.chat.id, str(answers), currentDateTime)
+    data_tuple = (str(uuid4()), f'{message.chat.username} {message.chat.last_name} {message.chat.first_name}',
+                  str(answers), currentDateTime)
     cur.execute("INSERT INTO users VALUES(?, ?, ?, ?);", data_tuple)
     conn.commit()
 
@@ -101,8 +106,8 @@ def func(message):
         button_start = types.KeyboardButton("👊 Let's get ready to rumble!")
         markup.add(button_start)
         bot.send_message(message.chat.id, text="Викторина состоит из 10 вопросов. В каждом вопросе нужно выбрать "
-                                               "один правильный ответ. Возмодности ответить повторно у тебя нет, прости. "
-                                               "Постарайся не ошибаться с выбором) Желаю удачи!", reply_markup=markup)
+                                               "один правильный ответ. Возмодности ответить повторно у тебя нет, прости.\n"
+                                               "Постарайся не ошибаться с выбором)\nЖелаю удачи!", reply_markup=markup)
 
         bot.send_photo(message.chat.id, photo=open('rumble.png', 'rb'))
     #первый вопрос------------------------------------------------------------------------------------------------
@@ -188,7 +193,7 @@ def func(message):
     #последний ответ--------------------------- --------------------------------------------------------------------
     elif (message.text in right_answers) and (message.text in list_of_questions[9].values()):
         count_of_answers += 1
-        bot.send_message(message.chat.id, text="Хуясе ты умный!")
+        bot.send_message(message.chat.id, text="Правильно!")
         time.sleep(1)
         result(count_of_answers, message)
         db_write(message, answers)
@@ -202,7 +207,7 @@ def func(message):
                          reply_markup=markup)
 
     elif (message.text not in right_answers) and (message.text in list_of_questions[9].values()):
-        bot.send_message(message.chat.id, text=f"Хуясе ты тупой!")
+        bot.send_message(message.chat.id, text=f"Неправильно")
         bot.send_message(message.chat.id, text=list_of_questions[9]['right_answer'])
         time.sleep(1)
         result(count_of_answers, message)
