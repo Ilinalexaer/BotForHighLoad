@@ -8,6 +8,7 @@ import random
 from uuid import uuid4
 import datetime
 import json
+import prettytable as pt
 
 load_dotenv(find_dotenv())
 bot = telebot.TeleBot(os.getenv('TOKEN'))
@@ -40,7 +41,7 @@ def right_answer(message, number):
     global count_of_answers
     count_of_answers += 1
     answers[list_of_questions[number-1]['question_text']] = message.text
-    bot.send_message(message.chat.id, text="Правильно!")
+    bot.send_message(message.chat.id, text="✅Правильно!")
     time.sleep(1)
     bot.send_message(message.chat.id, text=list_of_questions[number]['question_text'],
                      reply_markup=option_answers(list_of_questions[number]['option1'], list_of_questions[number]['option2'],
@@ -50,8 +51,9 @@ def right_answer(message, number):
 
 def wrong_answer(message, number):
     answers[list_of_questions[number-1]['question_text']] = message.text
-    bot.send_message(message.chat.id, text=f"Неправильно\n\n{list_of_questions[number-1]['right_answer']}")
-    #bot.send_message(message.chat.id, text=list_of_questions[number-1]['right_answer'])
+    #вариант с правильными ответами
+    #bot.send_message(message.chat.id, text=f"⛔️Неправильно\n\n{list_of_questions[number-1]['right_answer']}")
+    bot.send_message(message.chat.id, text="⛔️Неправильно!")
     time.sleep(1)
     bot.send_message(message.chat.id, text=list_of_questions[number]['question_text'],
                      reply_markup=option_answers(list_of_questions[number]['option1'], list_of_questions[number]['option2'],
@@ -60,57 +62,113 @@ def wrong_answer(message, number):
         bot.send_photo(message.chat.id, photo=open(list_of_questions[number]['picture'], 'rb'))
 
 
-def result(count_of_answers, message):
+def result(count_of_answers, message, time_spend):
     if count_of_answers < 4:
-        bot.send_message(message.chat.id, text=f'Ты набрал {count_of_answers}')
+        bot.send_message(message.chat.id, text=f'Ты набрал {count_of_answers} из 10')
+        bot.send_message(message.chat.id, text=f"Твое время - {time_spend}")
         bot.send_photo(message.chat.id, photo=open('Alistair_Cockburn.jpg', 'rb'))
     elif count_of_answers >= 4 and count_of_answers <= 7:
-        bot.send_message(message.chat.id, text=f'Ты набрал {count_of_answers}')
+        bot.send_message(message.chat.id, text=f'Ты набрал {count_of_answers} из 10')
+        bot.send_message(message.chat.id, text=f"Твое время - {time_spend}")
         bot.send_photo(message.chat.id, photo=open('Martin_Fowler.jpg', 'rb'))
     else:
         bot.send_message(message.chat.id, text=f'Ты набрал {count_of_answers} из 10')
+        bot.send_message(message.chat.id, text=f"Твое время - {time_spend}")
         bot.send_photo(message.chat.id, photo=open('karl-weigers.png', 'rb'))
 
-def db_write(message, answers):
+def db_check_user(message):
+    conn = sqlite3.connect('quiz.db')
+    cur = conn.cursor()
+    cur.execute("""CREATE TABLE IF NOT EXISTS users(
+            uuid TEXT PRIMARY KEY,
+            user_id TEXT,
+            user_name TEXT,
+            user_last_name TEXT,
+            user_first_name TEXT,
+            answers TEXT,
+            right_answers INTEGER,
+            time REAL,
+            date TIMESTAMP);
+            """)
+
+    cur.execute(f'SELECT * FROM users WHERE user_id = {message.from_user.id}')
+    if cur.fetchall():
+        return False
+        conn.commit()
+    else:
+        return True
+        conn.commit()
+
+def db_write(message, answers, count_of_answers, time_spend):
     currentDateTime = datetime.datetime.now()
     conn = sqlite3.connect('quiz.db')
     cur = conn.cursor()
     cur.execute("""CREATE TABLE IF NOT EXISTS users(
-            user_id TEXT PRIMARY KEY,
-            chat_id TEXT,
-            price TEXT,
+            uuid TEXT PRIMARY KEY,
+            user_id TEXT,
+            user_name TEXT,
+            user_last_name TEXT,
+            user_first_name TEXT,
+            answers TEXT,
+            right_answers INTEGER,
+            time REAL,
             date TIMESTAMP);
             """)
-    data_tuple = (str(uuid4()), f'{message.chat.username} {message.chat.last_name} {message.chat.first_name}',
-                  str(answers), currentDateTime)
-    cur.execute("INSERT INTO users VALUES(?, ?, ?, ?);", data_tuple)
+    data_tuple = (str(uuid4()), message.from_user.id, message.chat.username, message.chat.last_name,
+                  message.chat.first_name, str(answers), int(count_of_answers), time_spend, currentDateTime)
+    cur.execute("INSERT INTO users VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?);", data_tuple)
     conn.commit()
 
+def db_show_result():
+    conn = sqlite3.connect('quiz.db')
+    cur = conn.cursor()
+    cur.execute("""CREATE TABLE IF NOT EXISTS users(
+            uuid TEXT PRIMARY KEY,
+            user_id TEXT,
+            user_name TEXT,
+            user_last_name TEXT,
+            user_first_name TEXT,
+            answers TEXT,
+            right_answers INTEGER,
+            time REAL,
+            date TIMESTAMP);
+            """)
+
+    result = cur.execute('SELECT user_name, user_last_name, user_first_name, right_answers, time '
+                'FROM users '
+                'ORDER BY right_answers')
+    return result
+
+def table_quiz():
+    table = pt.PrettyTable(['Ник', 'Фамилия', 'Имя', 'Ответы', 'Время'])
+    for user_name,  user_last_name, user_first_name, answers, time in db_show_result():
+        table.add_row([user_name, user_last_name, user_first_name, f'{answers:.4f}', f'{time:.5f}'])
+    return table
 
 count_of_answers = 0
 answers = {}
 @bot.message_handler(commands=['start'])
 def start(message):
-    global count_of_answers
-    global answers
+    #global count_of_answers
+    #global answers
     count_of_answers = 0
     answers = {}
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     button_start = types.KeyboardButton("🥳 Я в деле!")
     button_end = types.KeyboardButton("🤐 Давай в другой раз")
     markup.add(button_start).add(button_end)
-    bot.send_message(message.chat.id, text="Привет\nПредлагаем тебе поучаствовать в викторине для системных и бизнес "
-                                           "аналитиков от компании Звук", reply_markup=markup)
-
+    bot.send_message(message.chat.id, text="<b>Привет</b>\nПредлагаем тебе поучаствовать в викторине для системных и бизнес "
+                                           "аналитиков от компании Звук", reply_markup=markup, parse_mode='HTML')
 
 @bot.message_handler(content_types=['text'])
 def func(message):
     global count_of_answers
     global answers
-    if message.text == "🤐 Давай в другой раз":
-        bot.send_message(message.chat.id, text="Тогда лови ссылочку на нашу вакансию - https://hh.ru/vacancy/54389180")
+    global start_time
+    if (message.text == "🤐 Давай в другой раз") or (message.text == '❤️ Наша вакансия'):
+        bot.send_message(message.chat.id, text="Нага вакансия\nhttps://hh.ru/vacancy/54389180")
 
-    elif message.text == "🥳 Я в деле!":
+    elif (message.text == "🥳 Я в деле!") and (db_check_user(message)):
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         button_start = types.KeyboardButton("👊 Let's get ready to rumble!")
         markup.add(button_start)
@@ -119,8 +177,13 @@ def func(message):
                                                "Постарайся не ошибаться с выбором)\nЖелаю удачи!", reply_markup=markup)
 
         bot.send_photo(message.chat.id, photo=open('rumble.png', 'rb'))
+
+    elif (message.text == "🥳 Я в деле!") and (db_check_user(message) == False):
+        bot.send_message(message.chat.id, text="Ты уже проходил🤷")
+
     #первый вопрос------------------------------------------------------------------------------------------------
-    elif message.text == "👊 Let's get ready to rumble!":
+    elif message.text == ("👊 Let's get ready to rumble!") and (db_check_user(message)):
+        start_time = time.time()
         time.sleep(1)
         bot.send_message(message.chat.id, text=list_of_questions[0]['question_text'],
                              reply_markup=option_answers(list_of_questions[0]['option1'], list_of_questions[0]['option2'],
@@ -193,27 +256,44 @@ def func(message):
     #последний ответ--------------------------- --------------------------------------------------------------------
     elif (message.text in right_answers) and (message.text in list_of_questions[9].values()):
         count_of_answers += 1
-        bot.send_message(message.chat.id, text="Правильно!")
+        bot.send_message(message.chat.id, text="✅Правильно!")
         time.sleep(1)
-        result(count_of_answers, message)
-        db_write(message, answers)
+
+        time_spend = round(time.time() - start_time, 3)
+        result(count_of_answers, message, time_spend)
+
+        #bot.send_message(message.chat.id, text=f"Ваше время - {time_spend}")
+        db_write(message, answers, count_of_answers, time_spend)
         end_of_quiz(message)
 
     elif (message.text not in right_answers) and (message.text in list_of_questions[9].values()):
-        bot.send_message(message.chat.id, text=f"Неправильно")
-        bot.send_message(message.chat.id, text=list_of_questions[9]['right_answer'])
+        bot.send_message(message.chat.id, text="⛔️Неправильно")
+        #bot.send_message(message.chat.id, text=list_of_questions[9]['right_answer'])
         time.sleep(1)
-        result(count_of_answers, message)
-        db_write(message, answers)
+        time_spend = round(time.time() - start_time, 3)
+        result(count_of_answers, message, time_spend)
+        #bot.send_message(message.chat.id, text=f"Ваше время - {time_spend}")
+        db_write(message, answers, count_of_answers, time_spend)
         end_of_quiz(message)
 
-    elif (message.text == '👍 Классно') or (message.text == '👎 Слабовато'):
+    elif (message.text == '👎 Слабовато'):
         count_of_answers = 0
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        button_start = types.KeyboardButton("🥳 Я в деле!")
-        button_end = types.KeyboardButton("🤐 Давай в другой раз")
-        markup.add(button_start).add(button_end)
-        bot.send_message(message.chat.id, text="Хочешь повторить?", reply_markup=markup)
+        button_start = types.KeyboardButton("❤️ Наша вакансия")
+        markup.add(button_start)
+        bot.send_message(message.chat.id, text="Ты крут, присоединяйся к команде Звука", reply_markup=markup)
+
+    elif (message.text == '👍 Классно'):
+        count_of_answers = 0
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        button_start = types.KeyboardButton("❤️ Наша вакансия")
+        markup.add(button_start)
+        bot.send_message(message.chat.id, text="Присоединяйся к команде Звука", reply_markup=markup)
+
+    elif (message.text == 'Результаты'):
+        with open('result.html', 'w') as f:
+            f.write(f'<pre>{table_quiz()}</pre>')
+        bot.send_document(message.chat.id, open('result.html', 'rb'))
 
     else:
         bot.send_message(message.chat.id, text="На такую комманду я не запрограммирован...")
