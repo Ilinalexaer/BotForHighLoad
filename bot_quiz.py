@@ -70,15 +70,15 @@ def result(count_of_answers, message, time_spend):
     if count_of_answers < 4:
         bot.send_message(message.chat.id, text=f'Ты набрал {count_of_answers} из 10')
         bot.send_message(message.chat.id, text=f"Твое время - {int(time_spend//60)}м {round(time_spend%60, 2)}с")
-        bot.send_photo(message.chat.id, photo=open('Alistair_Cockburn.jpg', 'rb'))
+        bot.send_photo(message.chat.id, photo=open('bad.jpeg', 'rb'))
     elif count_of_answers >= 4 and count_of_answers <= 7:
         bot.send_message(message.chat.id, text=f'Ты набрал {count_of_answers} из 10')
         bot.send_message(message.chat.id, text=f"Твое время - {int(time_spend//60)}м {round(time_spend%60, 2)}с")
-        bot.send_photo(message.chat.id, photo=open('Martin_Fowler.jpg', 'rb'))
+        bot.send_photo(message.chat.id, photo=open('good.jpeg', 'rb'))
     else:
         bot.send_message(message.chat.id, text=f'Ты набрал {count_of_answers} из 10')
         bot.send_message(message.chat.id, text=f"Твое время - {int(time_spend//60)}м {round(time_spend%60, 2)}с")
-        bot.send_photo(message.chat.id, photo=open('karl-weigers.png', 'rb'))
+        bot.send_photo(message.chat.id, photo=open('amazing.jpeg', 'rb'))
 
 
 def db_check_user(message):
@@ -141,12 +141,12 @@ def db_show_result():
 
     result = cur.execute('SELECT user_name, user_last_name, user_first_name, right_answers, time '
                 'FROM users '
-                'ORDER BY right_answers')
+                'ORDER BY right_answers DESC, time DESC')
     return result
 
 
 def table_quiz():
-    table = pt.PrettyTable(['Ник', 'Фамилия', 'Имя', 'Ответы', 'Время'])
+    table = pt.PrettyTable(['Nike', 'LastName', 'FirstName', 'Answers', 'TimeSpent'])
     for user_name,  user_last_name, user_first_name, answers, time in db_show_result():
         table.add_row([user_name, user_last_name, user_first_name, f'{answers:.4f}', f'{time:.5f}'])
     return table
@@ -184,7 +184,7 @@ def func(message):
                                                "один правильный ответ. Возможности ответить повторно у тебя нет, прости.\n"
                                                "Постарайся не ошибаться с выбором)\nЖелаю удачи!", reply_markup=markup)
 
-        bot.send_photo(message.chat.id, photo=open('rumble.png', 'rb'))
+        bot.send_photo(message.chat.id, photo=open('ready.jpeg', 'rb'))
 
     elif (message.text == "🥳 Я в деле!") and (db_check_user(message) == False):
         bot.send_message(message.chat.id, text="Ты уже проходил🤷")
