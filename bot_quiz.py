@@ -68,16 +68,16 @@ def wrong_answer(message, number):
 
 def result(count_of_answers, message, time_spend):
     if count_of_answers < 4:
-        bot.send_message(message.chat.id, text=f'Ты набрал {count_of_answers} из 10')
-        bot.send_message(message.chat.id, text=f"Твое время - {int(time_spend//60)}м {round(time_spend%60, 2)}с")
+        bot.send_message(message.chat.id, text=f'🎯 ты набрал {count_of_answers} из 10')
+        bot.send_message(message.chat.id, text=f"⏱ твоё время - {int(time_spend//60)} мин {round(time_spend%60, 2)}с")
         bot.send_photo(message.chat.id, photo=open('bad.jpeg', 'rb'))
     elif count_of_answers >= 4 and count_of_answers <= 7:
-        bot.send_message(message.chat.id, text=f'Ты набрал {count_of_answers} из 10')
-        bot.send_message(message.chat.id, text=f"Твое время - {int(time_spend//60)}м {round(time_spend%60, 2)}с")
+        bot.send_message(message.chat.id, text=f'🎯 ты набрал {count_of_answers} из 10')
+        bot.send_message(message.chat.id, text=f"⏱ твоё время - {int(time_spend//60)} мин {round(time_spend%60, 2)}с")
         bot.send_photo(message.chat.id, photo=open('good.jpeg', 'rb'))
     else:
-        bot.send_message(message.chat.id, text=f'Ты набрал {count_of_answers} из 10')
-        bot.send_message(message.chat.id, text=f"Твое время - {int(time_spend//60)}м {round(time_spend%60, 2)}с")
+        bot.send_message(message.chat.id, text=f'🎯 ты набрал {count_of_answers} из 10')
+        bot.send_message(message.chat.id, text=f"⏱ твоё время - {int(time_spend//60)} мин {round(time_spend%60, 2)}с")
         bot.send_photo(message.chat.id, photo=open('amazing.jpeg', 'rb'))
 
 
@@ -141,7 +141,7 @@ def db_show_result():
 
     result = cur.execute('SELECT user_name, user_last_name, user_first_name, right_answers, time '
                 'FROM users '
-                'ORDER BY right_answers DESC, time DESC')
+                'ORDER BY right_answers DESC, time ASC')
     return result
 
 
@@ -164,7 +164,7 @@ def start(message):
     button_start = types.KeyboardButton("🥳 Я в деле!")
     button_end = types.KeyboardButton("🤐 Давай в другой раз")
     markup.add(button_start).add(button_end)
-    bot.send_message(message.chat.id, text="<b>Привет</b>\nПредлагаем тебе поучаствовать в викторине для системных и бизнес "
+    bot.send_message(message.chat.id, text="Привет!\nПредлагаем тебе поучаствовать в викторине для системных и бизнес "
                                            "аналитиков от компании Звук", reply_markup=markup, parse_mode='HTML')
 
 
@@ -180,9 +180,11 @@ def func(message):
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         button_start = types.KeyboardButton("👊 Let's get ready to rumble!")
         markup.add(button_start)
-        bot.send_message(message.chat.id, text="Викторина состоит из 10 вопросов. В каждом вопросе нужно выбрать "
-                                               "один правильный ответ. Возможности ответить повторно у тебя нет, прости.\n"
-                                               "Постарайся не ошибаться с выбором)\nЖелаю удачи!", reply_markup=markup)
+        bot.send_message(message.chat.id, text="🔹<b>Викторина состоит из 10 вопросов</b>\n🔹<b>В каждом вопросе нужно выбрать "
+                                               "один правильный ответ</b>\n🔹<b>Время прохождения также учитывается</b>\n"
+                                               "🔹<b>Пройти викторину можно только один раз</b>\n\n"
+                                               "Постарайся не ошибаться с выбором)\nЖелаю удачи!",
+                         reply_markup=markup, parse_mode='HTML')
 
         bot.send_photo(message.chat.id, photo=open('ready.jpeg', 'rb'))
 
